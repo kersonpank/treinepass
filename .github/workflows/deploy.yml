@@ -1,0 +1,40 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          npm install
+          
+      - name: Run Tests
+        run: |
+          cd backend
+          npm run test
+
+      - name: Deploy to VPS
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/treinepass
+            git pull origin main
+            docker stack deploy -c docker-compose.yml treinepass --with-registry-auth
